@@ -1,0 +1,71 @@
+@page "/map"
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+@inject IJSRuntime Js
+
+<PageTitle>City Map</PageTitle>
+
+<h1>Visitor Locations</h1>
+
+@if (_loading)
+{
+    <p>Loading map data...</p>
+}
+else if (_pins.Count == 0)
+{
+    <p>No submissions yet. Be the first person to add your city.</p>
+}
+else
+{
+    <div id="city-map" class="city-map"></div>
+
+    <div class="mt-4">
+        <h2>Top Cities</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var pin in _pins)
+                {
+                    <tr>
+                        <td>@pin.City</td>
+                        <td>@pin.State</td>
+                        <td>@pin.Count</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private readonly List<MapPinDto> _pins = [];
+    private bool _loading = true;
+    private bool _mapRendered;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var pins = await Http.GetFromJsonAsync<List<MapPinDto>>("/api/map") ?? [];
+
+        _pins.Clear();
+        _pins.AddRange(pins);
+        _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_mapRendered || _loading || _pins.Count == 0)
+        {
+            return;
+        }
+
+        _mapRendered = true;
+        await Js.InvokeVoidAsync("cityMapApp.renderMap", "city-map", _pins);
+    }
+}
